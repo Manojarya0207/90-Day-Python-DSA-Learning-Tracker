@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>90-Day Python DSA Tracker</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+/* ----------------- Global Styles ----------------- */
+body {
+  font-family: 'Poppins', sans-serif;
+  background: linear-gradient(135deg, #ece9e6, #ffffff);
+  margin: 0; padding: 0;
+}
+.container {
+  max-width: 1000px;
+  margin: 30px auto;
+  background: #fff;
+  padding: 30px 40px;
+  border-radius: 20px;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.08);
+}
+h1 {
+  text-align: center;
+  color: #333;
+  font-weight: 700;
+  margin-bottom: 30px;
+}
+.progress-container, .filter-container, .add-topic-container {
+  margin-bottom: 25px;
+}
+
+/* ----------------- Progress Bars ----------------- */
+.progress-bar, .weekly-progress-bar {
+  width: 100%;
+  background: #e0e0e0;
+  border-radius: 20px;
+  overflow: hidden;
+  height: 25px;
+  box-shadow: inset 0 2px 5px rgba(0,0,0,0.1);
+  margin-top: 8px;
+}
+.progress-fill, .weekly-progress-fill {
+  height: 100%;
+  width: 0%;
+  border-radius: 20px;
+  transition: width 0.5s;
+}
+.week-label {
+  margin-top: 15px;
+  font-weight: 600;
+  color: #555;
+}
+
+/* ----------------- Day Cards ----------------- */
+.days-container {
+  margin-top: 25px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 18px;
+}
+.day {
+  background: #f8f8f8;
+  padding: 20px 22px;
+  border-radius: 16px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  box-shadow: 0 6px 15px rgba(0,0,0,0.05);
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+.day:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 25px rgba(0,0,0,0.12);
+}
+.day.completed {
+  background: linear-gradient(135deg,#81c784,#4caf50);
+  color: white;
+  font-weight: 600;
+}
+.day button {
+  padding: 8px 14px;
+  border: none;
+  background: #4caf50;
+  color: white;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 500;
+  margin-top: 12px;
+  transition: background 0.3s;
+}
+.day button:hover { background: #388e3c; }
+.day button.completed-btn {
+  background: #81c784;
+  cursor: default;
+}
+
+/* ----------------- Filter & Add ----------------- */
+.filter-container select {
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+  font-weight: 500;
+}
+.add-topic-container input, .add-topic-container button {
+  padding: 9px 14px;
+  margin-right: 6px;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+  font-weight: 500;
+}
+.add-topic-container button {
+  background: #2196f3;
+  color: white;
+  border: none;
+  cursor: pointer;
+  transition: background 0.3s;
+}
+.add-topic-container button:hover { background: #1565c0; }
+#resetProgressBtn {
+  background:#f44336;
+  color:white;
+  border:none;
+  cursor:pointer;
+  transition: background 0.3s;
+}
+#resetProgressBtn:hover { background:#d32f2f; }
+
+/* ----------------- Task Items ----------------- */
+.task-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 6px;
+  background: #fff;
+  padding: 6px 10px;
+  border-radius: 8px;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+  cursor: grab;
+  transition: background 0.2s;
+}
+.task-item:hover { background: #f0f0f0; }
+.task-item span { flex: 1; user-select:none; }
+.task-item button {
+  padding: 4px 8px;
+  margin-left: 5px;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  font-size: 12px;
+}
+.task-item button.edit-btn { background: #ff9800; color:white; }
+.task-item button.save-btn { background: #4caf50; color:white; }
+.task-item button.cancel-btn { background: #f44336; color:white; }
+
+/* ----------------- Pie Chart ----------------- */
+#pieChartContainer {
+  max-width: 450px;
+  margin: 40px auto;
+}
+
+/* ----------------- Responsive ----------------- */
+@media(max-width:600px){
+  .days-container { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>90-Day Python DSA Tracker</h1>
+
+  <div class="progress-container">
+    <label>Overall Progress:</label>
+    <div class="progress-bar">
+      <div class="progress-fill" id="overallProgress"></div>
+    </div>
+    <span id="progressPercent">0%</span>
+  </div>
+
+  <div id="weeklyProgress"></div>
+
+  <div class="filter-container">
+    <label>Filter by Week or Topic:</label>
+    <select id="filterSelect"><option value="all">All</option></select>
+  </div>
+
+  <div class="add-topic-container">
+    <input type="number" id="newDay" placeholder="Day #" min="1" max="90">
+    <input type="text" id="newTopic" placeholder="Topic / Task">
+    <input type="number" id="newWeek" placeholder="Week #" min="1" max="12">
+    <button id="addTopicBtn">Add Topic</button>
+    <button id="resetProgressBtn">Reset Progress</button>
+  </div>
+
+  <div class="days-container" id="daysContainer"></div>
+
+  <div id="pieChartContainer">
+    <canvas id="monthlyPieChart"></canvas>
+  </div>
+</div>
+
+<script>
+// ----------------- DSA Days Data -----------------
+let dsaDays = [];
+for(let i=1;i<=90;i++){
+  let week = Math.ceil(i/7);
+  dsaDays.push({day:i, week:week, tasks: [`Task ${i} Example`]});
+}
+
+// ----------------- Week Colors -----------------
+const weekColors = [
+  "#f28b82","#fbbc04","#fff475","#ccff90","#a7ffeb","#cbf0f8",
+  "#aecbfa","#d7aefb","#fdcfe8","#e6c9a8","#e8eaed","#b0b0b0"
+];
+
+// ----------------- Local Storage -----------------
+let completedDays = JSON.parse(localStorage.getItem("completedDays")) || [];
+
+// ----------------- Filter Options -----------------
+const filterSelect = document.getElementById("filterSelect");
+let topicsSet = new Set();
+dsaDays.forEach(d => d.tasks.forEach(t => topicsSet.add(t)));
+topicsSet.forEach(topic => {
+  let opt = document.createElement("option");
+  opt.value = topic;
+  opt.textContent = topic;
+  filterSelect.appendChild(opt);
+});
+
+// ----------------- Days Container -----------------
+const daysContainer = document.getElementById("daysContainer");
+const overallProgress = document.getElementById("overallProgress");
+const progressPercent = document.getElementById("progressPercent");
+
+// ----------------- Render Days -----------------
+function renderDays(filter="all"){
+  daysContainer.innerHTML = "";
+  let filteredDays = dsaDays.filter(d => {
+    if(filter==="all") return true;
+    if(filter.startsWith("Week")) return d.week === parseInt(filter.split(" ")[1]);
+    return d.tasks.includes(filter);
+  });
+  filteredDays.forEach(dayObj => {
+    const dayDiv = document.createElement("div");
+    dayDiv.className = "day";
+    if(completedDays.includes(dayObj.day)) dayDiv.classList.add("completed");
+
+    const tasksContainer = document.createElement("div");
+    tasksContainer.innerHTML = `<strong>Day ${dayObj.day} (Week ${dayObj.week}):</strong>`;
+
+    dayObj.tasks.forEach((task,index)=>{
+      const taskDiv = document.createElement("div");
+      taskDiv.className = "task-item";
+      taskDiv.draggable = true;
+      taskDiv.dataset.index = index;
+      taskDiv.innerHTML = `<span>${task}</span><div><button class="edit-btn">Edit</button></div>`;
+
+      // Drag events
+      taskDiv.addEventListener('dragstart', e=>{
+        e.dataTransfer.setData("text/plain", index);
+      });
+      taskDiv.addEventListener('dragover', e=> e.preventDefault());
+      taskDiv.addEventListener('drop', e=>{
+        const from = parseInt(e.dataTransfer.getData("text/plain"));
+        const to = parseInt(taskDiv.dataset.index);
+        if(from!==to){
+          const temp = dayObj.tasks[from];
+          dayObj.tasks[from]=dayObj.tasks[to];
+          dayObj.tasks[to]=temp;
+          renderDays(filterSelect.value);
+        }
+      });
+
+      // Edit functionality
+      taskDiv.querySelector(".edit-btn").addEventListener("click", ()=>{
+        const span = taskDiv.querySelector("span");
+        const currentTask = span.textContent;
+        taskDiv.innerHTML = `<input type="text" value="${currentTask}"/>
+          <button class="save-btn">Save</button>
+          <button class="cancel-btn">Cancel</button>`;
+        const input = taskDiv.querySelector("input");
+        taskDiv.querySelector(".save-btn").addEventListener("click", ()=>{
+          const newValue = input.value.trim();
+          if(newValue){
+            dayObj.tasks[index]=newValue;
+            if(!Array.from(filterSelect.options).some(o=>o.value===newValue)){
+              let opt = document.createElement("option");
+              opt.value=newValue; opt.textContent=newValue;
+              filterSelect.appendChild(opt);
+            }
+            renderDays(filterSelect.value);
+          } else alert("Task cannot be empty");
+        });
+        taskDiv.querySelector(".cancel-btn").addEventListener("click", ()=>renderDays(filterSelect.value));
+      });
+
+      tasksContainer.appendChild(taskDiv);
+    });
+
+    dayDiv.appendChild(tasksContainer);
+
+    const btn = document.createElement("button");
+    if(completedDays.includes(dayObj.day)){
+      btn.className="completed-btn";
+      btn.disabled=true;
+      btn.textContent="Completed";
+    } else btn.textContent="Mark Done";
+    btn.addEventListener("click", ()=>markCompleted(dayObj.day));
+    dayDiv.appendChild(btn);
+
+    daysContainer.appendChild(dayDiv);
+  });
+  updateProgress();
+}
+
+// ----------------- Mark Completed -----------------
+function markCompleted(day){
+  if(!completedDays.includes(day)) completedDays.push(day);
+  localStorage.setItem("completedDays",JSON.stringify(completedDays));
+  renderDays(filterSelect.value);
+}
+
+// ----------------- Update Progress -----------------
+function updateProgress(){
+  const percent = Math.round((completedDays.length/dsaDays.length)*100);
+  overallProgress.style.width = percent+"%";
+  progressPercent.textContent = percent+"%";
+
+  const weeklyProgressDiv = document.getElementById("weeklyProgress");
+  weeklyProgressDiv.innerHTML="";
+  for(let w=1;w<=12;w++){
+    const weekDays = dsaDays.filter(d=>d.week===w);
+    const weekCompleted = weekDays.filter(d=>completedDays.includes(d.day)).length;
+    const weekPercent = Math.round((weekCompleted/weekDays.length)*100);
+    const weekDiv = document.createElement("div");
+    weekDiv.innerHTML=`<span class="week-label">Week ${w}</span>
+      <div class="weekly-progress-bar">
+        <div class="weekly-progress-fill" style="width:${weekPercent}%; background:${weekColors[w-1]}"></div>
+      </div>`;
+    weeklyProgressDiv.appendChild(weekDiv);
+  }
+  renderPieChart();
+}
+
+// ----------------- Pie Chart -----------------
+let pieChart;
+function renderPieChart(){
+  const monthCompletion=[];
+  for(let m=0;m<3;m++){
+    const monthDays = dsaDays.slice(m*30,(m+1)*30);
+    const completed = monthDays.filter(d=>completedDays.includes(d.day)).length;
+    monthCompletion.push(completed);
+  }
+  const ctx = document.getElementById("monthlyPieChart").getContext("2d");
+  if(pieChart) pieChart.destroy();
+  pieChart = new Chart(ctx,{
+    type:"pie",
+    data:{ labels:["Month 1","Month 2","Month 3"], datasets:[{data:monthCompletion, backgroundColor:["#4caf50","#2196f3","#ff9800"]}] },
+    options:{ responsive:true }
+  });
+}
+
+// ----------------- Filter & Add -----------------
+filterSelect.addEventListener("change", ()=>renderDays(filterSelect.value));
+
+document.getElementById("addTopicBtn").addEventListener("click", ()=>{
+  const day=parseInt(document.getElementById("newDay").value);
+  const topic=document.getElementById("newTopic").value.trim();
+  const week=parseInt(document.getElementById("newWeek").value);
+  if(day && topic && week){
+    let dayObj=dsaDays.find(d=>d.day===day);
+    if(dayObj) dayObj.tasks.push(topic);
+    else dsaDays.push({day,week,tasks:[topic]});
+    if(!Array.from(filterSelect.options).some(o=>o.value===topic)){
+      let opt=document.createElement("option");
+      opt.value=topic; opt.textContent=topic;
+      filterSelect.appendChild(opt);
+    }
+    renderDays(filterSelect.value);
+    document.getElementById("newDay").value="";
+    document.getElementById("newTopic").value="";
+    document.getElementById("newWeek").value="";
+  } else alert("Please fill Day #, Topic, and Week #");
+});
+
+// ----------------- Reset Progress -----------------
+document.getElementById("resetProgressBtn").addEventListener("click", ()=>{
+  if(confirm("Are you sure you want to reset all progress?")){
+    completedDays=[];
+    localStorage.setItem("completedDays",JSON.stringify(completedDays));
+    renderDays(filterSelect.value);
+  }
+});
+
+// ----------------- Initial Render -----------------
+renderDays();
+</script>
+</body>
+</html>
